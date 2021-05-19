@@ -5,7 +5,7 @@ import csv
 import glob
 
 #CONFIG:
-LOAD_AND_SHRINK_TRAIN_IMAGES = False
+LOAD_AND_SHRINK_TRAIN_IMAGES = True
 
 
 SIZE_IMAGE = 256
@@ -42,8 +42,8 @@ if LOAD_AND_SHRINK_TRAIN_IMAGES:
         image = Image.open(string_containing_substring(train_images_files_paths, row['image'])).resize((256, 256))
         if image is not None:
                 labels_train.append(label)
-                #images_train.append(image)
-                image.save("files/" + row['image'])
+                tmp = np.array(image)
+                images_train.append(tmp)
         else:
             print("Error")
         index += 1
@@ -51,7 +51,7 @@ if LOAD_AND_SHRINK_TRAIN_IMAGES:
 
     print("Total: " + str(len(labels_train)))
     np.save('files/labels_train.npy', labels_train)
-
+    np.save('files/images_train.npy', images_train)
 
 data = pd.read_csv('anno_test.csv')
 labels_test = []
