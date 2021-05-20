@@ -3,6 +3,44 @@ import numpy as np
 from PIL import Image
 import csv
 import glob
+import cv2
+from matplotlib import pyplot as plt
+
+
+def grabcut(cv2image, x1, y1, x2, y2):
+    mask = np.zeros(cv2image.shape[:2],np.uint8)
+    bgdModel = np.zeros((1,65),np.float64)
+    fgdModel = np.zeros((1,65),np.float64)
+
+    rectangle = (x1,y1,x2,y2)
+   
+    cv2.grabCut(cv2image,mask,rectangle,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
+    mask2 = np.where((mask==2)|(mask==0),0,1).astype('uint8')
+    image = cv2image*mask2[:,:,np.newaxis]
+
+    return image
+
+def PIL_to_CV2(PilImage):
+    return cv2.cvtColor(np.asarray(PilImage),cv2.COLOR_RGB2BGR) 
+
+def CV2_to_PIL(cv2Image):
+    img = cv2.cvtColor(cv2Image, cv2.COLOR_BGR2RGB)
+    im_pil = Image.fromarray(img)
+    return im_pil
+
+def preprocess(PilImage, x1, y1, x2, y2):
+    cv2Image = PIL_to_CV2(PilImage)
+   
+    cv2Image = cv2.blur(cv2Image, (2,2))
+    cv2Image = grabcut(cv2Image, x1, y1, x2, y2)
+    cv2Image = cv2.cvtColor(cv2Image, cv2.COLOR_BGR2GRAY)
+    cv2Image = cv2.equalizeHist(cv2Image)
+
+    plt.imshow(cv2Image)
+    plt.show()
+
+    pilImage = CV2_to_PIL(cv2Image)
+    return pilImage
 
 #CONFIG:
 LOAD_AND_SHRINK_TRAIN_IMAGES = True
@@ -28,7 +66,7 @@ index = 1
 total = data.shape[0]
 
 train_images_files_paths = []
-for filename in glob.iglob("archive" + '**/**', recursive=True):
+for filename in glob.iglob("archive\\car_data\\car_data\\train" + '**/**', recursive=True):
     train_images_files_paths.append(filename)
 
 def string_containing_substring(train_images_files_paths, substring):
@@ -39,10 +77,16 @@ def string_containing_substring(train_images_files_paths, substring):
 if LOAD_AND_SHRINK_TRAIN_IMAGES:
     for index, row in data.iterrows():
         label = label_to_vector(row['label'])
-        image = Image.open(string_containing_substring(train_images_files_paths, row['image'])).resize((256, 256))
+        x1 = (row['value1'])
+        y1 = (row['value2'])
+        x2 = (row['value3'])
+        y2 = (row['value4'])
+
+        image = Image.open(string_containing_substring(train_images_files_paths, row['image']))
         if image is not None:
                 labels_train.append(label)
-                tmp = np.array(image)
+                tmp = preprocess(image, x1, y1, x2, y2)
+                tmp.resize((256, 256))
                 images_train.append(tmp)
         else:
             print("Error")
