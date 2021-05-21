@@ -29,15 +29,15 @@ def CV2_to_PIL(cv2Image):
     return im_pil
 
 def preprocess(PilImage, x1, y1, x2, y2):
-    cv2Image = PIL_to_CV2(PilImage)
-   
+    cv2Image = PIL_to_CV2(PilImage) 
+
+    #cv2Image = grabcut(cv2Image, x1, y1, x2, y2)
     cv2Image = cv2.blur(cv2Image, (2,2))
-    cv2Image = grabcut(cv2Image, x1, y1, x2, y2)
     cv2Image = cv2.cvtColor(cv2Image, cv2.COLOR_BGR2GRAY)
     cv2Image = cv2.equalizeHist(cv2Image)
 
-    plt.imshow(cv2Image)
-    plt.show()
+    #plt.imshow(cv2Image)
+    #plt.show()
 
     pilImage = CV2_to_PIL(cv2Image)
     return pilImage
@@ -86,7 +86,8 @@ if LOAD_AND_SHRINK_TRAIN_IMAGES:
         if image is not None:
                 labels_train.append(label)
                 tmp = preprocess(image, x1, y1, x2, y2)
-                tmp.resize((256, 256))
+                tmp.resize((196, 196))
+                tmp = np.array(tmp)
                 images_train.append(tmp)
         else:
             print("Error")
