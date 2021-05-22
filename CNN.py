@@ -3,7 +3,7 @@ import numpy as np
 from os.path import join
 import os
 
-SIZE_IMAGE = 256
+SIZE_IMAGE = 128
 CARS = ['', '', '', '', '', '', '']
 
 
