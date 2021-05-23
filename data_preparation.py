@@ -11,7 +11,7 @@ import imutils
 #CONFIG:
 LOAD_AND_PREPROCESS_TRAIN_IMAGES = True
 LOAD_AND_PREPROCESS_TEST_IMAGES = True
-SHOW_IMAGES = True
+SHOW_IMAGES = False
 
 SIZE_IMAGE = 128
 
@@ -55,17 +55,17 @@ def preprocess(PilImage, x1, y1, x2, y2):
     cv2Image = PIL_to_CV2(PilImage)
     not_processed = PIL_to_CV2(PilImage)
 
-    cv2Image = grabcut(cv2Image, x1, y1, x2, y2) 
+    #cv2Image = grabcut(cv2Image, x1, y1, x2, y2) 
     cv2Image = cv2.blur(cv2Image, (2,2))
     if cv2Image.shape == 3:
         cv2Image = cv2.cvtColor(cv2Image, cv2.COLOR_BGR2GRAY)
         cv2Image = cv2.equalizeHist(cv2Image)
-    #cv2Image = imutils.rotate_bound(cv2Image, random.randint(0, 360))
+    cv2Image = imutils.rotate_bound(cv2Image, random.randint(0, 360))
 
-    cv2Image  = adjust_gamma(cv2Image , gamma=1.5)
+    cv2Image  = adjust_gamma(cv2Image , gamma=0.7)
     
-    PilImage = CV2_to_PIL(cv2Image)
-    enhancer = ImageEnhance.Brightness(PilImage)
+    #PilImage = CV2_to_PIL(cv2Image)
+    #enhancer = ImageEnhance.Brightness(PilImage)
     #PilImage = enhancer.enhance(1.5)
 
     cv2Image = PIL_to_CV2(PilImage)
@@ -145,7 +145,7 @@ for index, row in data.iterrows():
     image = Image.open(string_containing_substring(test_images_files_paths, row['image'])).resize((SIZE_IMAGE, SIZE_IMAGE))
     if image is not None:
             labels_test.append(label)
-            tmp = image.convert('P', palette=Image.ADAPTIVE, colors=2)
+            #tmp = image.convert('P', palette=Image.ADAPTIVE, colors=2)
             tmp = PIL_to_CV2(image)
             tmp = np.array(image)
             images_test.append(tmp)
