@@ -56,11 +56,11 @@ def preprocess(PilImage, x1, y1, x2, y2):
     not_processed = PIL_to_CV2(PilImage)
 
     #cv2Image = grabcut(cv2Image, x1, y1, x2, y2) 
-    cv2Image = cv2.blur(cv2Image, (2,2))
-    if cv2Image.shape == 3:
+    cv2Image = cv2.blur(cv2Image, (5,5))
+    if len(cv2Image.shape)== 3:
         cv2Image = cv2.cvtColor(cv2Image, cv2.COLOR_BGR2GRAY)
         cv2Image = cv2.equalizeHist(cv2Image)
-    cv2Image = imutils.rotate_bound(cv2Image, random.randint(0, 360))
+    #cv2Image = imutils.rotate_bound(cv2Image, random.randint(0, 360))
 
     cv2Image  = adjust_gamma(cv2Image , gamma=0.7)
     
@@ -81,7 +81,7 @@ def preprocess(PilImage, x1, y1, x2, y2):
 
 CARS = []
 
-with open('names_mini.csv', newline='') as f:
+with open('names copy.csv', newline='') as f:
     reader = csv.reader(f)
     CARS = list(reader)
 
@@ -91,7 +91,7 @@ def label_to_vector(index):
     vector[index-1] = 1.0
     return vector
 
-data = pd.read_csv('anno_train_mini.csv')
+data = pd.read_csv('anno_train copy.csv')
 labels_train = []
 images_train = []
 index = 1
@@ -118,7 +118,12 @@ if LOAD_AND_PREPROCESS_TRAIN_IMAGES:
         if image is not None:
                 labels_train.append(label)
                 tmp = preprocess(image, x1, y1, x2, y2)
-                tmp.resize((SIZE_IMAGE, SIZE_IMAGE))
+                #tmp = tmp.resize((SIZE_IMAGE, SIZE_IMAGE))
+                tmp = PIL_to_CV2(image)
+                if len(tmp.shape)== 3:
+                    tmp = cv2.cvtColor(tmp, cv2.COLOR_BGR2GRAY)
+                dim=(SIZE_IMAGE, SIZE_IMAGE)
+                tmp= cv2.resize(tmp, dim, interpolation = cv2.INTER_AREA)
                 tmp = np.array(tmp)
                 images_train.append(tmp)
         else:
@@ -130,7 +135,7 @@ if LOAD_AND_PREPROCESS_TRAIN_IMAGES:
     np.save('files/labels_train.npy', labels_train)
     np.save('files/images_train.npy', images_train)
 
-data = pd.read_csv('anno_test_mini.csv')
+data = pd.read_csv('anno_test copy.csv')
 labels_test = []
 images_test = []
 index = 1
@@ -142,12 +147,20 @@ for filename in glob.iglob("archive\\car_data\\car_data\\test" + '**/**', recurs
 
 for index, row in data.iterrows():
     label = label_to_vector(row['label'])
-    image = Image.open(string_containing_substring(test_images_files_paths, row['image'])).resize((SIZE_IMAGE, SIZE_IMAGE))
+    x1 = (row['value1'])
+    y1 = (row['value2'])
+    x2 = (row['value3'])
+    y2 = (row['value4'])
+    image = Image.open(string_containing_substring(test_images_files_paths, row['image']))
     if image is not None:
             labels_test.append(label)
-            #tmp = image.convert('P', palette=Image.ADAPTIVE, colors=2)
+            tmp = preprocess(image, x1, y1, x2, y2)
             tmp = PIL_to_CV2(image)
-            tmp = np.array(image)
+            if len(tmp.shape)== 3:
+                tmp = cv2.cvtColor(tmp, cv2.COLOR_BGR2GRAY)
+            dim=(SIZE_IMAGE, SIZE_IMAGE)
+            tmp= cv2.resize(tmp, dim, interpolation = cv2.INTER_AREA)
+            tmp = np.array(tmp)
             images_test.append(tmp)
     else:
         print("Error")

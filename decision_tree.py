@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 from sklearn import tree
+from sklearn.model_selection import KFold
 
 SHOW_IMAGES = False
 
@@ -37,30 +38,33 @@ def extract_features(image):
 
 train_images = np.load("files/images_train.npy", allow_pickle=True)
 train_labels = np.load("files/labels_train.npy", allow_pickle=True)
-
-train_image_features = []
-for image in train_images:
-    features = extract_features(image)
-    train_image_features.append(features)
-
 test_images = np.load("files/images_test.npy", allow_pickle=True)
 test_labels = np.load("files/labels_test.npy", allow_pickle=True)
 
-test_image_features = []
-for image in test_images:
+inputs = np.concatenate((train_images, test_images), axis=0)
+targets = np.concatenate((train_labels, test_labels), axis=0)
+
+image_features = []
+for image in inputs:
     features = extract_features(image)
-    test_image_features.append(features)
+    image_features.append(features)
 
+kfold = KFold(n_splits=4, shuffle=True)
 
-clf = DecisionTreeClassifier()
-clf = clf.fit(train_image_features, train_labels)
+fold_no = 5
+for train, test in kfold.split(inputs, targets):
+    clf = DecisionTreeClassifier()
+    clf = clf.fit(np.array(image_features)[train], targets[train])
 
-predictions = clf.predict(test_image_features)
+    predictions = clf.predict(np.array(image_features)[test])
 
-predictions_argmax=np.argmax(predictions, axis=1)
-test_labels_argmax = np.argmax(test_labels, axis=1)
+    predictions_argmax=np.argmax(predictions, axis=1)
+    test_labels_argmax = np.argmax(targets[test], axis=1)
 
-print("Accuracy:", metrics.accuracy_score(test_labels_argmax, predictions_argmax))
+    print("Accuracy:", metrics.accuracy_score(test_labels_argmax, predictions_argmax))
+    print("F1 Score:", metrics.f1_score(test_labels_argmax, predictions_argmax, average='weighted'))
+    print("Mathious correlacion coefficient:", metrics.matthews_corrcoef(test_labels_argmax, predictions_argmax))
+
 
 #tree.plot_tree(clf)
 #plt.show()
