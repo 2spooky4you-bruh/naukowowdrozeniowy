@@ -9,11 +9,14 @@ from math import *
 from tflearn import init_graph
 from skimage.io import imshow, imread
 from matplotlib import pyplot as plt
+from tensorflow import keras
+from tensorflow.keras import layers
+
 
 SIZE_IMAGE = 128
 SHOW_IMAGES = False
 
-with open('names copy.csv', newline='') as f:
+with open('names.csv', newline='') as f:
     reader = csv.reader(f)
     CARS = list(reader)
 
@@ -22,32 +25,37 @@ class Recognition:
 
     def build_network(self):
 
-        self.network = tfl.input_data(shape=[None, SIZE_IMAGE, SIZE_IMAGE, 1])
-        self.network = tfl.conv_2d(self.network, 32, 5, activation='relu')
-        self.network = tfl.max_pool_2d(self.network, 3, strides=2)
-        self.network = tfl.conv_2d(self.network, 32, 5, activation='relu')
-        self.network = tfl.max_pool_2d(self.network, 3, strides=2)
-        self.network = tfl.conv_2d(self.network, 64, 4, activation='relu')
-        self.network = tfl.dropout(self.network, 0.3)
-        self.network = tfl.fully_connected(self.network, 100, activation='relu')
-        self.network = tfl.fully_connected(self.network, len(CARS), activation='softmax')
+        self.model = keras.Sequential(
+        [
+            keras.layers.InputLayer(input_shape=[SIZE_IMAGE, SIZE_IMAGE, 1]),
+            layers.Conv2D(128, kernel_size=(5, 5), activation="relu"),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Dropout(0.1),
+            layers.Conv2D(64, kernel_size=(4, 4), activation="relu"),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Dropout(0.1),
+            layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Dropout(0.1),
+            layers.Conv2D(64, kernel_size=(2, 2), activation="relu"),
+            layers.BatchNormalization(),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Flatten(),
+            layers.Dropout(0.3),
+            layers.Dense(len(CARS), activation="softmax"),
+        ])
+      
+        self.model.summary()
 
-        self.network = tfl.regression(
-            self.network,
-             optimizer='momentum',
-             loss='categorical_crossentropy'
-         )
+        self.model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 
-
-        self.model = tfl.DNN(
-            self.network,
-            checkpoint_path='./files',
-            max_checkpoints=1,
-            tensorboard_verbose=2
-        )
 
     def train_net(self):
-        init_graph(seed=343)
+        from tensorflow import set_random_seed
+        set_random_seed(1)
 
         self.images_train = np.load(join('./files', 'images_train.npy'), allow_pickle=True)
         self.labels_train = np.load(join('./files', 'labels_train.npy'), allow_pickle=True)
@@ -58,11 +66,8 @@ class Recognition:
         self.images_train = self.images_train /255.0
         self.images_test = self.images_test /255.0
 
-
-        #self.images_train = self.images_train.reshape(len(self.images_train), SIZE_IMAGE, SIZE_IMAGE, 1)
-        #self.images_test = self.images_test.reshape(len(self.images_test), SIZE_IMAGE, SIZE_IMAGE, 1)
-        self.images_train = self.images_train.reshape(-1, SIZE_IMAGE, SIZE_IMAGE, 1)
-        self.images_test = self.images_test.reshape(-1, SIZE_IMAGE, SIZE_IMAGE, 1)
+        self.images_train = self.images_train.reshape(len(self.images_train), SIZE_IMAGE, SIZE_IMAGE, 1)
+        self.images_test = self.images_test.reshape(len(self.images_test), SIZE_IMAGE, SIZE_IMAGE, 1)
 
         self.inputs = np.concatenate((self.images_train, self.images_test), axis=0)
         self.targets = np.concatenate((self.labels_train,  self.labels_test), axis=0)
@@ -82,17 +87,7 @@ class Recognition:
         fold_no = 1
         for train, test in kfold.split(self.inputs, self.targets):
 
-            self.model.fit(
-                self.inputs[train], self.targets[train],
-                validation_set=(self.inputs[test], self.targets[test]),
-                n_epoch=5,
-                batch_size=64,
-                shuffle=False,
-                show_metric=True,
-                snapshot_step=200,
-                snapshot_epoch=True,
-                run_id='car_recognition'
-            )
+            self.model.fit(self.inputs[train], self.targets[train], validation_data=(self.inputs[test], self.targets[test]), batch_size=64, epochs=40)
 
             #scores = self.model.evaluate(self.inputs[test], self.targets[test])
 

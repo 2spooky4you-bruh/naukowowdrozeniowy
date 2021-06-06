@@ -14,7 +14,11 @@ LOAD_AND_PREPROCESS_TEST_IMAGES = True
 SHOW_IMAGES = False
 
 SIZE_IMAGE = 128
-
+ADJUST_GAMMA = 1.0
+GRABCUT = False
+EQUALIZE_HIST = False
+ROTATE = False
+BRIGHTNESS = 1.0
 
 def adjust_gamma(image, gamma=1.0):
     #https://www.pyimagesearch.com/2015/10/05/opencv-gamma-correction/
@@ -55,20 +59,26 @@ def preprocess(PilImage, x1, y1, x2, y2):
     cv2Image = PIL_to_CV2(PilImage)
     not_processed = PIL_to_CV2(PilImage)
 
-    #cv2Image = grabcut(cv2Image, x1, y1, x2, y2) 
+    if GRABCUT:
+        cv2Image = grabcut(cv2Image, x1, y1, x2, y2) 
     cv2Image = cv2.blur(cv2Image, (5,5))
-    if len(cv2Image.shape)== 3:
-        cv2Image = cv2.cvtColor(cv2Image, cv2.COLOR_BGR2GRAY)
-        cv2Image = cv2.equalizeHist(cv2Image)
-    #cv2Image = imutils.rotate_bound(cv2Image, random.randint(0, 360))
 
-    cv2Image  = adjust_gamma(cv2Image , gamma=0.7)
+    if EQUALIZE_HIST:
+        if len(cv2Image.shape)== 3:
+            cv2Image = cv2.cvtColor(cv2Image, cv2.COLOR_BGR2GRAY)
+            cv2Image = cv2.equalizeHist(cv2Image)
+
+    if ROTATE:
+        cv2Image = imutils.rotate_bound(cv2Image, random.randint(0, 360))
+
+    if ADJUST_GAMMA != 1.0:
+        cv2Image  = adjust_gamma(cv2Image , gamma=0.7)
     
-    #PilImage = CV2_to_PIL(cv2Image)
-    #enhancer = ImageEnhance.Brightness(PilImage)
-    #PilImage = enhancer.enhance(1.5)
-
-    cv2Image = PIL_to_CV2(PilImage)
+    if BRIGHTNESS != 1.0:
+        pilImage = CV2_to_PIL(cv2Image)
+        enhancer = ImageEnhance.Brightness(pilImage)
+        pilImage = enhancer.enhance(1.5)
+        cv2Image = PIL_to_CV2(pilImage)
 
     if SHOW_IMAGES:  
         #plt.imshow(np.hstack([not_processed, cv2Image]))
@@ -81,7 +91,7 @@ def preprocess(PilImage, x1, y1, x2, y2):
 
 CARS = []
 
-with open('names copy.csv', newline='') as f:
+with open('names.csv', newline='') as f:
     reader = csv.reader(f)
     CARS = list(reader)
 
@@ -91,7 +101,9 @@ def label_to_vector(index):
     vector[index-1] = 1.0
     return vector
 
-data = pd.read_csv('anno_train copy.csv')
+config_name ='Size=' +  str(SIZE_IMAGE) + 'Grabcut=' + str(GRABCUT) + 'Gamma=' + str(ADJUST_GAMMA) + 'EqHist=' + str(EQUALIZE_HIST) + 'Rotate=' + str(ROTATE) + 'Brightness=' + str(BRIGHTNESS)
+
+data = pd.read_csv('anno_train.csv')
 labels_train = []
 images_train = []
 index = 1
@@ -117,13 +129,14 @@ if LOAD_AND_PREPROCESS_TRAIN_IMAGES:
         image = Image.open(string_containing_substring(train_images_files_paths, row['image']))
         if image is not None:
                 labels_train.append(label)
-                tmp = preprocess(image, x1, y1, x2, y2)
+                #tmp = preprocess(image, x1, y1, x2, y2)
                 #tmp = tmp.resize((SIZE_IMAGE, SIZE_IMAGE))
                 tmp = PIL_to_CV2(image)
                 if len(tmp.shape)== 3:
                     tmp = cv2.cvtColor(tmp, cv2.COLOR_BGR2GRAY)
                 dim=(SIZE_IMAGE, SIZE_IMAGE)
                 tmp= cv2.resize(tmp, dim, interpolation = cv2.INTER_AREA)
+                tmp= cv2.blur(tmp, (5,5))
                 tmp = np.array(tmp)
                 images_train.append(tmp)
         else:
@@ -133,9 +146,9 @@ if LOAD_AND_PREPROCESS_TRAIN_IMAGES:
 
     print("Total: " + str(len(labels_train)))
     np.save('files/labels_train.npy', labels_train)
-    np.save('files/images_train.npy', images_train)
+    np.save('files/images_train' + config_name + '.npy', images_train)
 
-data = pd.read_csv('anno_test copy.csv')
+data = pd.read_csv('anno_test.csv')
 labels_test = []
 images_test = []
 index = 1
@@ -154,12 +167,13 @@ for index, row in data.iterrows():
     image = Image.open(string_containing_substring(test_images_files_paths, row['image']))
     if image is not None:
             labels_test.append(label)
-            tmp = preprocess(image, x1, y1, x2, y2)
+            #tmp = preprocess(image, x1, y1, x2, y2)
             tmp = PIL_to_CV2(image)
             if len(tmp.shape)== 3:
                 tmp = cv2.cvtColor(tmp, cv2.COLOR_BGR2GRAY)
             dim=(SIZE_IMAGE, SIZE_IMAGE)
             tmp= cv2.resize(tmp, dim, interpolation = cv2.INTER_AREA)
+            tmp= cv2.blur(tmp, (5,5))
             tmp = np.array(tmp)
             images_test.append(tmp)
     else:
@@ -169,4 +183,4 @@ for index, row in data.iterrows():
 
 print("Total: " + str(len(images_test)))
 np.save('./files/labels_test.npy', labels_test)
-np.save('./files/images_test.npy', images_test)
+np.save('./files/images_test' + config_name + 'npy', images_test)
